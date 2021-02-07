@@ -9,3 +9,10 @@ pip-delete-this-directory.txt
 
 # Jupyter Notebook
 .ipynb_checkpoints
+
+# PyCharm
+/.idea/
+
+# Dataset and output directory
+/dataset/
+/output/
