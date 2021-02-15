@@ -16,6 +16,7 @@ import click
 import cv2
 import numpy as np
 import pims
+import math
 
 from _corners import (
     FrameCorners,
@@ -51,17 +52,20 @@ def _build_impl(frame_sequence: pims.FramesSequence,
     # https://docs.opencv.org/3.4/d4/dee/tutorial_optical_flow.html
 
     # params for ShiTomasi corner detection
-    max_corners = 1000
+    max_corners_1920_1080 = 2000
+    max_corners = frame_sequence.frame_shape[0] * frame_sequence.frame_shape[1] * max_corners_1920_1080 / (1920 * 1080)
+    max_corners = math.ceil(max_corners)
+
     min_distance = 7
     feature_params = dict(minDistance=min_distance,
-                          qualityLevel=0.01,
+                          qualityLevel=0.0025,
                           blockSize=7)
 
     # Parameters for lucas kanade optical flow
     lk_params = dict(winSize=(15, 15),
                      maxLevel=2,
                      criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03),
-                     minEigThreshold=0.002)
+                     minEigThreshold=0.0004)
 
     image_0 = frame_sequence[0]
     corner_points_0 = cv2.goodFeaturesToTrack(image_0, maxCorners=max_corners, mask=None, **feature_params)
@@ -94,7 +98,8 @@ def _build_impl(frame_sequence: pims.FramesSequence,
                 mask = cv2.circle(mask, (x, y), radius=min_distance, color=0, thickness=cv2.FILLED)
 
             additional_corners_num = max_corners - len(corner_points_1)
-            new_points = cv2.goodFeaturesToTrack(image_1, maxCorners=additional_corners_num, mask=mask, **feature_params)
+            new_points = cv2.goodFeaturesToTrack(image_1, maxCorners=additional_corners_num, mask=mask,
+                                                 **feature_params)
             new_points = new_points if new_points is not None else np.zeros((0, 1, 2), dtype=np.float32)
             corner_points_1 = np.append(corner_points_1, new_points, axis=0)
 
