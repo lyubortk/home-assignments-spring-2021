@@ -62,10 +62,10 @@ def _build_impl(frame_sequence: pims.FramesSequence,
                           blockSize=7)
 
     # Parameters for lucas kanade optical flow
-    lk_params = dict(winSize=(15, 15),
-                     maxLevel=2,
-                     criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03),
-                     minEigThreshold=0.0004)
+    lk_params = dict(winSize=(21, 21),
+                     maxLevel=5,
+                     criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 40, 0.01),
+                     minEigThreshold=0.0001)
 
     image_0 = frame_sequence[0]
     corner_points_0 = cv2.goodFeaturesToTrack(image_0, maxCorners=max_corners, mask=None, **feature_params)
