@@ -21,7 +21,8 @@ from _camtrack import (
     TriangulationParameters,
     build_correspondences,
     triangulate_correspondences,
-    rodrigues_and_translation_to_view_mat3x4
+    rodrigues_and_translation_to_view_mat3x4,
+    Correspondences
 )
 import cv2
 from collections import namedtuple
@@ -220,7 +221,12 @@ def get_possible_positions(frame_1: int,
 
     E, mask_essential = cv2.findEssentialMat(correspondences.points_1, correspondences.points_2, intrinsic_mat,
                                              method=cv2.RANSAC, prob=0.99, threshold=3.0)
+    if E is None:
+        return None
+
     _, mask_homography = cv2.findHomography(correspondences.points_1, correspondences.points_2, method=cv2.RANSAC)
+    if mask_homography is None:
+        mask_homography = np.zeros(shape=(len(correspondences.points_1), 1), dtype=np.int64)
 
     essential_indices = np.nonzero(mask_essential.flatten())
     homography_indices = np.nonzero(mask_homography.flatten())
@@ -231,8 +237,10 @@ def get_possible_positions(frame_1: int,
     # if len(essential_not_in_homography) / len(mask_essential) < 0.1:
     #     return None
 
-    inliers, R, t, _ = cv2.recoverPose(E, correspondences.points_1, correspondences.points_2,
+    inliers_num, R, t, inliers = cv2.recoverPose(E, correspondences.points_1, correspondences.points_2,
                                        intrinsic_mat, mask=mask_essential)
+    if inliers_num == 0:
+        return None
 
     view_mat1 = np.eye(3, 4)
     view_mat2 = np.hstack((R, t))
@@ -241,7 +249,13 @@ def get_possible_positions(frame_1: int,
             min_triangulation_angle_deg=1,
             min_depth=0.5
         )
-    _, corner_ids, median_cos = triangulate_correspondences(correspondences,
+
+    correspondences_inliers_only = Correspondences(
+        correspondences.ids[np.nonzero(inliers.flatten())],
+        correspondences.points_1[np.nonzero(inliers.flatten())],
+        correspondences.points_2[np.nonzero(inliers.flatten())]
+    )
+    _, corner_ids, median_cos = triangulate_correspondences(correspondences_inliers_only,
                                                             view_mat1, view_mat2,
                                                             intrinsic_mat, triangulation_parameters)
     pose_1 = view_mat3x4_to_pose(view_mat1)
